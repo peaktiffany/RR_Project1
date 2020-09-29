@@ -1,0 +1,85 @@
+---
+title: "Reproducible Research" 
+author: "Tiffany Peak"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+<h1>Introduction</h1>
+
+It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. These type of devices are part of the “quantified self” movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
+
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+
+<h3>What is the mean total number of steps taken per day?<h3>
+```{r}
+library(readr)
+library(ggplot2)
+library(knitr)
+library(dplyr)
+
+data <- read.csv("activity.csv")
+
+stepsaday <- aggregate(steps ~ date, data, sum, na.rm=TRUE)
+
+hist(stepsaday$steps, col = "lightpink", main = "Steps per Day", xlab = "Steps")
+```
+
+```{r}
+stepsadayMean <- mean(stepsaday$steps)
+stepsadayMean
+
+
+stepsadayMedian <- median(stepsaday$steps)
+stepsadayMedian
+```
+<h3>What is the average daily activity pattern?<h3>
+```{r}
+stepsaninterval<-aggregate(steps~interval, data, mean,na.rm=TRUE)
+
+plot(steps~interval, data=stepsaninterval, type="l", main = "Steps per 5 Minute Interval", col = "darkgreen")
+
+```
+```{r}
+MostSteps <- stepsaninterval[which.max(stepsaninterval$steps),]$interval
+MostSteps
+```
+<h3>Inputing Missing Values<h3>
+```{r}
+stepsadayNoNA<- data %>% 
+  replace(is.na(.), 0)
+
+stepsaday2 <- aggregate(steps ~ date, stepsadayNoNA, sum, na.rm=TRUE)
+hist(stepsaday2$steps, main = "Adjusted Steps per Day", col = "pink", xlab = "Steps")
+```
+
+```{r}
+stepsaday2Mean <- mean(stepsaday2$steps)
+stepsaday2Median <- median(stepsaday2$steps)
+
+stepsaday2Median
+```
+<h3>Are there differences in activity patterns between weekdays and weekends?
+```{r}
+stepsadayNoNA$RealDate <- as.Date(stepsadayNoNA$date, format = "%Y-%m-%d")
+
+stepsadayNoNA$weekday <- weekdays(stepsadayNoNA$RealDate)
+
+stepsadayNoNA$DayType <- ifelse(stepsadayNoNA$weekday=='Saturday' | stepsadayNoNA$weekday=='Sunday', 'weekend','weekday')
+
+StepsPerTimeDT <- aggregate(steps~interval+DayType,data=stepsadayNoNA, FUN=mean, na.action=na.omit)
+
+StepsPerTimeDTtime <- stepsadayNoNA$interval/100
+
+patternGraphs <- ggplot(StepsPerTimeDT, aes(interval, steps))
+
+patternGraphs+geom_line(col= "darkgreen")+ggtitle("Average steps per time interval: weekdays vs. weekends")+xlab("Time")+ylab("Steps")+theme(plot.title = element_text(face="bold", size=12))+facet_grid(DayType ~ .)
+
+```
